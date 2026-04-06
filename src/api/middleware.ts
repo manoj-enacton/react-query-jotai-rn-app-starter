@@ -1,8 +1,9 @@
 import { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios'
-import Toast from 'react-native-toast-message'
+// import Toast from 'react-native-toast-message'  // uncomment when adding error toasts
 import { storage } from '@/storage/mmkv'
 import { STORAGE_KEYS } from '@/storage/storageKeys'
-import { navigationRef } from '@/navigation/navigationRef'
+import { jotaiStore } from '@/store/store'
+import { authTokenAtom, currentUserAtom } from '@/store/atoms/authAtoms'
 
 // ─── Request Interceptor ────────────────────────────────────────────────────
 
@@ -18,85 +19,42 @@ function onRequest(config: InternalAxiosRequestConfig): InternalAxiosRequestConf
 
 function onResponseError(error: AxiosError): Promise<never> {
   const status = error.response?.status
-  const data = error.response?.data as { message?: string } | undefined
+  // const data = error.response?.data as { message?: string } | undefined  // uncomment when reading error messages
 
+  // No response = network/timeout error.
+  // Do NOT toast here — TanStack Query will retry the request (retry: 2 in QueryClient).
+  // Toasting on every retry attempt would spam the user with 3 identical toasts.
+  // The query/mutation hook's own error state handles the UI for these cases.
   if (!error.response) {
-    // Network / timeout error
-    Toast.show({
-      type: 'error',
-      text1: 'Network Error',
-      text2: 'Please check your internet connection.',
-    })
     return Promise.reject(error)
   }
 
-  switch (status) {
-    case 401:
-      Toast.show({
-        type: 'error',
-        text1: 'Session Expired',
-        text2: 'Please log in again.',
-      })
-      forceLogout()
-      break
+  // ─── Add your global HTTP error handling here ────────────────────────────
+  // 401 → force logout (the only handler active by default)
+  // Uncomment or add cases below as needed for your app.
 
-    case 403:
-      Toast.show({
-        type: 'error',
-        text1: 'Access Denied',
-        text2: "You don't have permission to perform this action.",
-      })
-      break
-
-    case 404:
-      Toast.show({
-        type: 'error',
-        text1: 'Not Found',
-        text2: data?.message ?? 'The requested resource was not found.',
-      })
-      break
-
-    case 422:
-      Toast.show({
-        type: 'error',
-        text1: 'Validation Error',
-        text2: data?.message ?? 'Please check the information you entered.',
-      })
-      break
-
-    default:
-      if (status !== undefined && status >= 500) {
-        Toast.show({
-          type: 'error',
-          text1: 'Server Error',
-          text2: 'Something went wrong. Please try again later.',
-        })
-      } else {
-        Toast.show({
-          type: 'error',
-          text1: 'Error',
-          text2: data?.message ?? 'An unexpected error occurred.',
-        })
-      }
+  if (status === 401) {
+    // Toast.show({ type: 'error', text1: 'Session Expired', text2: 'Please log in again.' })
+    forceLogout()
   }
+
+  // case 403 — Access denied
+  // case 422 — Validation error
+  // case 5xx — Server error
+  // Add your own toast / navigation / logging logic here per status code
 
   return Promise.reject(error)
 }
 
 // ─── Force Logout ───────────────────────────────────────────────────────────
+// Setting authTokenAtom to null via jotaiStore triggers the Navigator to
+// switch to AuthStack automatically — no navigationRef.reset() needed.
 
 function forceLogout(): void {
-  // Clear persisted auth data
   storage.delete(STORAGE_KEYS.AUTH_TOKEN)
   storage.delete(STORAGE_KEYS.USER_SESSION)
-
-  // Navigate to Login — works even outside React tree
-  if (navigationRef.isReady()) {
-    navigationRef.reset({
-      index: 0,
-      routes: [{ name: 'Login' as never }],
-    })
-  }
+  jotaiStore.set(authTokenAtom, null)
+  jotaiStore.set(currentUserAtom, null)
 }
 
 // ─── Apply to Axios Instance ────────────────────────────────────────────────

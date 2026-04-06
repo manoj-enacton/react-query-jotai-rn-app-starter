@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Provider as JotaiProvider } from 'jotai'
+import { jotaiStore } from '@/store/store'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import Toast from 'react-native-toast-message'
 
@@ -12,7 +13,7 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 1 * 60 * 1000,    // 1 min default stale time
       gcTime: 5 * 60 * 1000,       // 5 min garbage collection
-      retry: 2,                     // retry failed requests twice
+      retry: 1,                     // retry once on failure (network blip)
       refetchOnWindowFocus: false,  // RN has no window focus concept
     },
     mutations: {
@@ -30,7 +31,7 @@ interface Props {
 
 export default function AppProviders({ children }: Props) {
   return (
-    <JotaiProvider>
+    <JotaiProvider store={jotaiStore}>
       <QueryClientProvider client={queryClient}>
         <SafeAreaProvider>
           {children}

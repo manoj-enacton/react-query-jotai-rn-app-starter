@@ -1,6 +1,15 @@
 import { NavigatorScreenParams } from '@react-navigation/native'
 
-// ─── Stack Param Lists ────────────────────────────────────────────────────────
+// ─── Auth Stack ───────────────────────────────────────────────────────────────
+
+export type AuthStackParamList = {
+  Onboarding: undefined
+  Login: undefined
+  Signup: undefined
+  PasswordReset: undefined
+}
+
+// ─── Main App Stacks ──────────────────────────────────────────────────────────
 
 export type HomeStackParamList = {
   Home: undefined
@@ -23,9 +32,11 @@ export type RootTabParamList = {
   ProfileTab: NavigatorScreenParams<ProfileStackParamList>
 }
 
-// ─── Root Stack (wraps tabs — used for modals / login) ───────────────────────
+// ─── Root Stack ───────────────────────────────────────────────────────────────
+// Auth and Main are mutually exclusive — only one is mounted at a time.
+// Switching authTokenAtom between null ↔ value switches stacks automatically.
 
 export type RootStackParamList = {
+  Auth: NavigatorScreenParams<AuthStackParamList>
   Main: NavigatorScreenParams<RootTabParamList>
-  Login: undefined
 }

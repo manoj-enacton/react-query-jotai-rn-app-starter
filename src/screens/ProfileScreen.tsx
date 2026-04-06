@@ -1,9 +1,12 @@
 import React from 'react'
 import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native'
-import { useAtom } from 'jotai'
+import { useAtom, useSetAtom } from 'jotai'
 import { useUser } from '@/hooks/queries/useUser'
 import { useCreateUser } from '@/hooks/mutations/useCreateUser'
 import { themeAtom } from '@/store/atoms/appAtoms'
+import { authTokenAtom, currentUserAtom } from '@/store/atoms/authAtoms'
+import { storage } from '@/storage/mmkv'
+import { STORAGE_KEYS } from '@/storage/storageKeys'
 
 // Simulating logged-in user with id=1
 const DEMO_USER_ID = 1
@@ -12,6 +15,15 @@ export default function ProfileScreen() {
   const { data: user, isLoading } = useUser(DEMO_USER_ID)
   const { mutate: createUser, isPending } = useCreateUser()
   const [theme, setTheme] = useAtom(themeAtom)
+  const setToken = useSetAtom(authTokenAtom)
+  const setCurrentUser = useSetAtom(currentUserAtom)
+
+  function handleLogout() {
+    storage.delete(STORAGE_KEYS.AUTH_TOKEN)
+    storage.delete(STORAGE_KEYS.USER_SESSION)
+    setCurrentUser(null)
+    setToken(null) // triggers Navigator to switch to AuthStack
+  }
 
   if (isLoading) {
     return <ActivityIndicator style={styles.center} size="large" />
@@ -58,6 +70,10 @@ export default function ProfileScreen() {
           {isPending ? 'Creating User...' : 'Create Demo User'}
         </Text>
       </TouchableOpacity>
+
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <Text style={styles.logoutText}>Logout</Text>
+      </TouchableOpacity>
     </View>
   )
 }
@@ -99,4 +115,13 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { backgroundColor: '#aaa' },
   buttonText: { color: '#fff', fontWeight: '600' },
+  logoutButton: {
+    marginTop: 12,
+    padding: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e00',
+  },
+  logoutText: { color: '#e00', fontWeight: '600' },
 })
