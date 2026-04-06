@@ -2,7 +2,7 @@ import apiClient from '@/api/client'
 import { ENDPOINTS } from '@/api/endpoints'
 import { Post } from '@/api/types'
 
-// ─── Query Params ────────────────────────────────────────────────────────────
+// ─── Query Params ─────────────────────────────────────────────────────────────
 
 export interface GetPostsParams {
   userId?: number
@@ -24,8 +24,8 @@ export const postQueryFns = {
     const url = params?.userId
       ? ENDPOINTS.posts.byUser(params.userId)
       : ENDPOINTS.posts.list
-    const { data } = await apiClient.get<Post[]>(url)
-    return data
+    const { data } = await apiClient.get<{ posts: Post[] }>(url)
+    return data.posts
   },
 
   getById: async (id: number): Promise<Post> => {

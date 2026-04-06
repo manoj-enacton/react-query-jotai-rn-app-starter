@@ -32,7 +32,7 @@ export default function ExploreScreen() {
       refreshing={isLoading}
       renderItem={({ item }) => (
         <View style={styles.card}>
-          <Text style={styles.name}>{item.name}</Text>
+          <Text style={styles.name}>{item.firstName} {item.lastName}</Text>
           <Text style={styles.meta}>@{item.username}</Text>
           <Text style={styles.meta}>{item.email}</Text>
           <Text style={styles.company}>{item.company.name}</Text>

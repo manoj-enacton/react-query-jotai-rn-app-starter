@@ -2,8 +2,7 @@ import apiClient from '@/api/client'
 import { ENDPOINTS } from '@/api/endpoints'
 import { User } from '@/api/types'
 
-// ─── Query Keys ─────────────────────────────────────────────────────────────
-// Centralised keys ensure consistent cache invalidation everywhere
+// ─── Query Keys ──────────────────────────────────────────────────────────────
 
 export const userKeys = {
   all: ['users'] as const,
@@ -14,8 +13,8 @@ export const userKeys = {
 
 export const userQueryFns = {
   getAll: async (): Promise<User[]> => {
-    const { data } = await apiClient.get<User[]>(ENDPOINTS.users.list)
-    return data
+    const { data } = await apiClient.get<{ users: User[] }>(ENDPOINTS.users.list)
+    return data.users
   },
 
   getById: async (id: number): Promise<User> => {

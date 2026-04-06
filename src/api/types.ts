@@ -6,33 +6,37 @@ export interface ApiError {
   code?: string
 }
 
-export interface PaginatedResponse<T> {
-  data: T[]
+// DummyJSON wraps list responses in a paginated envelope
+export interface DummyListResponse<T> {
   total: number
-  page: number
+  skip: number
   limit: number
+  [key: string]: T[] | number  // e.g. { users: User[], total, skip, limit }
 }
 
 // ─── User ────────────────────────────────────────────────────────────────────
 
 export interface User {
   id: number
-  name: string
+  firstName: string
+  lastName: string
   username: string
   email: string
   phone: string
-  website: string
+  image: string
+  age: number
+  gender: string
   address: {
-    street: string
-    suite: string
+    address: string
     city: string
-    zipcode: string
-    geo: { lat: string; lng: string }
+    state: string
+    country: string
+    postalCode: string
   }
   company: {
     name: string
-    catchPhrase: string
-    bs: string
+    title: string
+    department: string
   }
 }
 
@@ -43,6 +47,9 @@ export interface Post {
   userId: number
   title: string
   body: string
+  tags: string[]
+  reactions: { likes: number; dislikes: number }
+  views: number
 }
 
 export interface CreatePostPayload {
@@ -55,13 +62,4 @@ export interface UpdatePostPayload {
   id: number
   title?: string
   body?: string
-}
-
-// ─── Todo ────────────────────────────────────────────────────────────────────
-
-export interface Todo {
-  id: number
-  userId: number
-  title: string
-  completed: boolean
 }

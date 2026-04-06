@@ -33,7 +33,7 @@ export default function ProfileScreen() {
     <View style={styles.container}>
       {/* User info from API */}
       <View style={styles.card}>
-        <Text style={styles.name}>{user?.name}</Text>
+        <Text style={styles.name}>{user?.firstName} {user?.lastName}</Text>
         <Text style={styles.meta}>@{user?.username}</Text>
         <Text style={styles.meta}>{user?.email}</Text>
         <Text style={styles.meta}>{user?.phone}</Text>

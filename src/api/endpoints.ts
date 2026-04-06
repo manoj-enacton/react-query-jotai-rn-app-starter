@@ -1,6 +1,6 @@
 // All API endpoint URLs in one place — change the base URL here to switch environments
 
-export const BASE_URL = 'https://jsonplaceholder.typicode.com'
+export const BASE_URL = 'https://dummyjson.com'
 
 export const ENDPOINTS = {
   // Users
@@ -14,7 +14,7 @@ export const ENDPOINTS = {
     list: '/posts',
     detail: (id: number) => `/posts/${id}`,
     byUser: (userId: number) => `/users/${userId}/posts`,
-    create: '/posts',
+    create: '/posts/add',
     update: (id: number) => `/posts/${id}`,
     delete: (id: number) => `/posts/${id}`,
   },
