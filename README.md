@@ -82,6 +82,229 @@ You've successfully run and modified your React Native App. :partying_face:
 - If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
 - If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
 
+---
+
+# Project Architecture
+
+## Tech Stack
+
+| Library | Version | Purpose |
+|---|---|---|
+| `@react-navigation/native` | ^7.1.0 | Navigation |
+| `@react-navigation/bottom-tabs` | ^7.3.0 | Tab bar |
+| `@react-navigation/native-stack` | ^7.3.0 | Stack navigation |
+| `@tanstack/react-query` | ^5.x | Server state / API calls |
+| `jotai` | ^2.x | Client / UI state |
+| `axios` | ^1.x | HTTP client |
+| `react-native-mmkv` | ^3.x | Persistent storage |
+| `react-native-toast-message` | ^2.x | Toast notifications |
+
+---
+
+## Folder Structure
+
+```
+src/
+├── api/                   # Axios client, middleware, endpoint URLs, shared types
+├── assets/                # Colors, images, animations
+├── hooks/
+│   ├── useRequestProcessor.ts   # Core generic wrapper for useQuery / useMutation
+│   ├── queries/           # One-liner query hooks used in components
+│   └── mutations/         # One-liner mutation hooks used in components
+├── mutations/             # Raw mutation functions (Axios POST/PUT/DELETE calls)
+├── navigation/            # Navigator, TabNavigator, stack navigators, types, ref
+├── providers/             # AppProviders — QueryClient + Jotai + SafeArea + Toast
+├── queries/               # Raw query functions (Axios GET calls) + query keys
+├── screens/               # Screen components
+├── storage/               # MMKV instance and storage key constants
+└── store/atoms/           # Jotai atoms (UI/client state, persisted via MMKV)
+```
+
+---
+
+## How to Add a New API Endpoint
+
+Follow these 4 steps every time you add a new API feature.
+
+### Step 1 — Add the URL to endpoints
+
+**`src/api/endpoints.ts`**
+
+```ts
+export const ENDPOINTS = {
+  dashboard: {
+    stats: '/dashboard',
+    revenue: '/dashboard/revenue',
+  },
+  // add more here ...
+}
+```
+
+### Step 2a — Add the query function (GET requests)
+
+Create **`src/queries/dashboardQueries.ts`**
+
+```ts
+import apiClient from '@/api/client'
+import { ENDPOINTS } from '@/api/endpoints'
+
+export interface DashboardStats {
+  totalUsers: number
+  revenue: number
+}
+
+// Query keys — used for caching and invalidation
+export const dashboardKeys = {
+  stats: ['dashboard', 'stats'] as const,
+}
+
+// The actual Axios call — no hooks, no React
+export const dashboardQueryFns = {
+  getStats: async (): Promise<DashboardStats> => {
+    const { data } = await apiClient.get<DashboardStats>(ENDPOINTS.dashboard.stats)
+    return data
+  },
+}
+```
+
+### Step 2b — Add the mutation function (POST / PUT / DELETE requests)
+
+Create **`src/mutations/dashboardMutations.ts`**
+
+```ts
+import apiClient from '@/api/client'
+import { ENDPOINTS } from '@/api/endpoints'
+
+export interface UpdateRevenuePayload {
+  amount: number
+}
+
+// The actual Axios call — no hooks, no React
+export const dashboardMutationFns = {
+  updateRevenue: async (payload: UpdateRevenuePayload): Promise<void> => {
+    await apiClient.post(ENDPOINTS.dashboard.revenue, payload)
+  },
+}
+```
+
+### Step 3a — Create the one-liner query hook
+
+Create **`src/hooks/queries/useDashboard.ts`**
+
+```ts
+import { useQueryProcessor } from '@/hooks/useRequestProcessor'
+import { dashboardKeys, dashboardQueryFns, DashboardStats } from '@/queries/dashboardQueries'
+
+export function useDashboard() {
+  return useQueryProcessor<DashboardStats, typeof dashboardKeys.stats>({
+    queryKey: dashboardKeys.stats,
+    queryFn: dashboardQueryFns.getStats,
+    staleTime: 2 * 60 * 1000,
+  })
+}
+```
+
+### Step 3b — Create the one-liner mutation hook
+
+Create **`src/hooks/mutations/useUpdateRevenue.ts`**
+
+```ts
+import { useMutationProcessor } from '@/hooks/useRequestProcessor'
+import { dashboardMutationFns, UpdateRevenuePayload } from '@/mutations/dashboardMutations'
+
+export function useUpdateRevenue() {
+  return useMutationProcessor<void, UpdateRevenuePayload>({
+    mutationFn: dashboardMutationFns.updateRevenue,
+    showSuccessToast: true,
+    successMessage: 'Revenue updated!',
+  })
+}
+```
+
+### Step 4 — Use in your component (one line each)
+
+```tsx
+export default function DashboardScreen() {
+  const { data, isLoading, error } = useDashboard()
+  const { mutate, isPending } = useUpdateRevenue()
+
+  // render...
+}
+```
+
+---
+
+## Hook Options
+
+Both `useQueryProcessor` and `useMutationProcessor` accept options to override defaults or pass parameters.
+
+```ts
+// With query params
+const { data } = usePosts({ userId: 5 })
+
+// With query params + TanStack options override
+const { data } = usePosts({ userId: 5 }, { enabled: !!userId, staleTime: 0 })
+
+// Mutation with success/error toast control
+useMutationProcessor({
+  mutationFn: ...,
+  showSuccessToast: true,
+  successMessage: 'Saved!',
+  showErrorToast: true,     // default: true
+  errorMessage: 'Custom error message',
+})
+```
+
+---
+
+## State Management (Jotai + MMKV)
+
+Atoms that need to survive app restarts are backed by MMKV via `atomWithStorage`:
+
+```ts
+// src/store/atoms/authAtoms.ts
+export const authTokenAtom = atomWithStorage('auth_token', null, mmkvStorageAdapter)
+
+// In component
+const [token, setToken] = useAtom(authTokenAtom)  // auto-persists to MMKV
+
+// Outside React (e.g. Axios interceptor) — sync read, no await
+const token = storage.getString(STORAGE_KEYS.AUTH_TOKEN)
+```
+
+---
+
+## Middleware (Axios Interceptors)
+
+All requests pass through **`src/api/middleware.ts`** which handles:
+
+| Scenario | Behaviour |
+|---|---|
+| Every request | Auth token auto-attached from MMKV |
+| `401 Unauthorized` | MMKV cleared → forced navigation to Login screen |
+| `403 Forbidden` | Toast: "Access Denied" |
+| `404 Not Found` | Toast: "Not Found" |
+| `5xx Server Error` | Toast: "Server Error" |
+| Network / timeout | Toast: "Network Error" |
+
+---
+
+## File Ownership Summary
+
+| What | Where |
+|---|---|
+| Base URL | `src/api/endpoints.ts` |
+| Endpoint paths | `src/api/endpoints.ts` |
+| Axios GET functions | `src/queries/*.ts` |
+| Axios POST/PUT/DELETE functions | `src/mutations/*.ts` |
+| Query hook (with keys + defaults) | `src/hooks/queries/*.ts` |
+| Mutation hook | `src/hooks/mutations/*.ts` |
+| Persistent small values | `src/storage/` + `src/store/atoms/` |
+| All routes | `src/navigation/Navigator.tsx` |
+| All providers | `src/providers/AppProviders.tsx` |
+
+---
+
 # Troubleshooting
 
 If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
