@@ -1,6 +1,6 @@
 import { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios'
 // import Toast from 'react-native-toast-message'  // uncomment when adding error toasts
-import { storage } from '@/storage/mmkv'
+import { appGetString, appDeleteString } from '@/utils/storageUtils'
 import { STORAGE_KEYS } from '@/storage/storageKeys'
 import { jotaiStore } from '@/store/store'
 import { authTokenAtom, currentUserAtom } from '@/store/atoms/authAtoms'
@@ -8,7 +8,7 @@ import { authTokenAtom, currentUserAtom } from '@/store/atoms/authAtoms'
 // ─── Request Interceptor ────────────────────────────────────────────────────
 
 function onRequest(config: InternalAxiosRequestConfig): InternalAxiosRequestConfig {
-  const token = storage.getString(STORAGE_KEYS.AUTH_TOKEN)
+  const token = appGetString(STORAGE_KEYS.AUTH_TOKEN)
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`
   }
@@ -51,8 +51,8 @@ function onResponseError(error: AxiosError): Promise<never> {
 // switch to AuthStack automatically — no navigationRef.reset() needed.
 
 function forceLogout(): void {
-  storage.delete(STORAGE_KEYS.AUTH_TOKEN)
-  storage.delete(STORAGE_KEYS.USER_SESSION)
+  appDeleteString(STORAGE_KEYS.AUTH_TOKEN)
+  appDeleteString(STORAGE_KEYS.USER_SESSION)
   jotaiStore.set(authTokenAtom, null)
   jotaiStore.set(currentUserAtom, null)
 }

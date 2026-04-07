@@ -5,7 +5,7 @@ import { useUser } from '@/hooks/queries/useUser'
 import { useCreateUser } from '@/hooks/mutations/useCreateUser'
 import { themeAtom } from '@/store/atoms/appAtoms'
 import { authTokenAtom, currentUserAtom } from '@/store/atoms/authAtoms'
-import { storage } from '@/storage/mmkv'
+import { appDeleteString } from '@/utils/storageUtils'
 import { STORAGE_KEYS } from '@/storage/storageKeys'
 
 // Simulating logged-in user with id=1
@@ -19,8 +19,8 @@ export default function ProfileScreen() {
   const setCurrentUser = useSetAtom(currentUserAtom)
 
   function handleLogout() {
-    storage.delete(STORAGE_KEYS.AUTH_TOKEN)
-    storage.delete(STORAGE_KEYS.USER_SESSION)
+    appDeleteString(STORAGE_KEYS.AUTH_TOKEN)
+    appDeleteString(STORAGE_KEYS.USER_SESSION)
     setCurrentUser(null)
     setToken(null) // triggers Navigator to switch to AuthStack
   }
